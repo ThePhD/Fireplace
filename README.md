@@ -6,7 +6,7 @@ The end result is a little fireplace, with the heavy draw aspects taken care of 
 Perhaps it was my use of random() and such, but the framerate visibly struggles when I approach 350+ particles.
 So, I couldn't do many other things with it.
 
-There's only a single emitter (see [fire_emitter]())
+There's only a single emitter (see [fire_emitter](https://github.com/ThePhD/Fireplace/blob/master/Fireplace.py#L20))
 
 The emitter goes through quite a lot of mathematical calculations to get a nice-looking drop-off effect for ash.
 Everything interesting is in Fireplace.py
