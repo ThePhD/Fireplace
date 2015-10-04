@@ -5,7 +5,7 @@ Mmm. Warm.
 
 ![Cozy, cozy FIRE.](http://puu.sh/ktSZC/126903a3c2.png)
 
-The idea came from seeing many traditional effects in computer graphics, which can mostly be traced back to a paper by William T. Reeves<sup>1</sup>. In it, Reeves laid out many of the fundamentals of particle systems (Page 93 and onward discuss the raw equations used).
+The idea came from seeing many traditional effects in computer graphics, which can mostly be traced back to a paper by William T. Reeves<sup>1</sup>. In it, Reeves laid out many of the fundamentals of particle systems (Page 93 and onward discuss the base equations used, including: distribution schemes, particle properties, and velocity/acceleration considerations).
 
 The goal of this project was to see if something realtime could be made in python (for a very barebones definition of realtime and something). The end result is a little fireplace, with the heavy draw aspects such as Block Image Transfer (blitting), rectangle drawing, and graphics device setting taken care of by pygame. Perhaps it was the heavy use of random() and such, but the framerate visibly struggles when approaching 350+ particles. Not much more could be done with it (this excluded adding a wind effect and another natural phenomena) without drastically reducing the framerate and turning a realtime particle emitter into a not-so-realtime particle emitter.
 
