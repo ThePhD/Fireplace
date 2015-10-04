@@ -13,7 +13,9 @@ The core working of the program is to start up a continuous loop (see [main.run]
 
 The general idea of the emitter is to, if there are less than a certain amount of particles, generate more particles with random velocities and offsets from a particular origin (up to a certain amount per each simulation step or frame). If enough particles with the right colors, velocities, and offsets, it begins to look like a single fuzzy object despite being composed of many individual pieces. Essentially any computable effect can be placed on the emitter. The fire emitter goes through quite a lot of mathematical calculations to get a nice-looking drop-off effect for ash (computed in the rendering step). A possible enhancement would be to use textures instead of rectangles or circles. There's only a single emitter (see [fire_emitter](https://github.com/ThePhD/Fireplace/blob/master/Fireplace.py#L20)), but more could be added for additional effects (bubbles in the ocean, fog, and even smoke for the aftermath of the fire).
 
-For this, as mentioned earlier, pygame is used. It's really just a wrapper around the C library [SDL](https://www.libsdl.org/), which is responsible for putting things on the screen without getting involved in low-level details. This allows us to clear the window to the white color and then draw the several particle bits that make the fire effect.
+For this, as mentioned earlier, pygame<sup>2</sup> is used. It's really just a wrapper around the C library SDL<sup>3</sup>, which is responsible for putting things on the screen without getting involved in low-level details. This allows us to clear the window to the white color and then draw the several particle bits that make the fire effect.
 
 
-<sup>1</sup> - Reeves, William T. & Lucasfilm, Ltd. _Particle Systems - A Technique for Modeling a Class of Fuzzy Objects_ ACM Transactions on Graphics (TOG). Volume 2, Issue 2, April 1983. Pages 91-108. New York, NY, USA.
+<sup>1</sup> - Reeves, William T. & Lucasfilm, Ltd. _Particle Systems. A Technique for Modeling a Class of Fuzzy Objects_ ACM Transactions on Graphics (TOG). Volume 2, Issue 2, April 1983. Pages 91-108. New York, NY, USA.
+<sup>2</sup> - Pygame: http://pygame.org/hifi.html
+<sup>3</sup> - Simple DirectMedia Layer (SDL): https://www.libsdl.org/
