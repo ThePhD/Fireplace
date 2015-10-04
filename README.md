@@ -16,4 +16,4 @@ The general idea of the emitter is to, if there are less than a certain amount o
 For this, as mentioned earlier, pygame is used. It's really just a wrapper around the C library [SDL](https://www.libsdl.org/), which is responsible for putting things on the screen without getting involved in low-level details. This allows us to clear the window to the white color and then draw the several particle bits that make the fire effect.
 
 
-<sup>[ 1 ]</sup> - Reeves, William T. & Lucasfilm, Ltd. _Particle Systems - A Technique for Modeling a Class of Fuzzy Objects_ ACM Transactions on Graphics (TOG). Volume 2, Issue 2, April 1983. Pages 91-108. New York, NY, USA.
+<sup>1</sup> - Reeves, William T. & Lucasfilm, Ltd. _Particle Systems - A Technique for Modeling a Class of Fuzzy Objects_ ACM Transactions on Graphics (TOG). Volume 2, Issue 2, April 1983. Pages 91-108. New York, NY, USA.
