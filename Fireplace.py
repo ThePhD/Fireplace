@@ -104,15 +104,7 @@ class fire_emitter ():
                p.yvelocity += p.yacceleration * dt
                p.x += p.xvelocity * dt
                p.y += p.yvelocity * dt
-               self.particle_step( p, dt )
-               # TODO: do not pull items out
-               # instead generate particles in-place
-               #if p.life == 0:
-               #     self.dead.append(i)
-          
-          # TODO: Remove this once we regenerate particles in-place
-          #for i in reversed(self.dead):
-          #          self.particles.pop(i)          
+               self.particle_step( p, dt )       
 
      def particle_render( self, screen, p ):
           # TODO: offset calculations into a table 
