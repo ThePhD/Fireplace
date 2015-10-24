@@ -21,8 +21,8 @@ class particle ():
 class rain_emitter ():
      def __init__(self):
           self.colors = [
-               (24, 0, 150, 255),
-               (51, 41, 157, 255),
+               (79, 56, 150, 255),
+               (51, 86, 157, 255),
                (127, 127, 140, 255),
                (105, 105, 255, 255),
                (100, 100, 128, 255),
@@ -30,7 +30,7 @@ class rain_emitter ():
           self.x = 0
           self.y = 0
           self.backgroundcolor = sfml.graphics.Color( 25, 25, 25, 255 )
-          self.textcolor = sfml.graphics.Color( 255, 255, 255, 255 )
+          self.textcolor = sfml.graphics.Color( 0, 255, 0, 255 )
           self.basesize = (-320, 640.0)
           self.heightjitter = (0.0, 25.0)
           self.particles = []
@@ -41,10 +41,10 @@ class rain_emitter ():
           self.particlesperstep = 2
           self.liveparticles = 0
           self.angle = 75
-          self.yvelrange = (-800, -480)
+          self.yvelrange = (-1200, -700)
           xvelpart = int(self.yvelrange[0] / math.tan(math.radians(self.angle)))
-          self.xvelrange = (xvelpart - 5, xvelpart + 5)
-          self.xsizerange = (1, 2)
+          self.xvelrange = (xvelpart - 50, xvelpart + 50)
+          self.xsizerange = (1, 3)
           self.ysizerange = (10, 18)
           self.persistence = 0.75
           self.radius = 640
@@ -142,14 +142,14 @@ class fire_emitter ():
           ]
           self.x = 0
           self.y = 0
-          self.backgroundcolor = sfml.graphics.Color( 25, 25, 25, 255 )
-          self.textcolor = sfml.graphics.Color( 255, 255, 255, 255 )
-          self.basesize = (-30.0, 30.0)
+          self.backgroundcolor = sfml.graphics.Color( 225, 225, 225, 255 )
+          self.textcolor = sfml.graphics.Color( 0, 0, 255, 255 )
+          self.basesize = (-50.0, 50.0)
           self.heightjitter = (-15.0, 15.0)
           self.particles = []
           # can't seem to handle more than this without making optimizations
           # of some sort...
-          self.maxparticles = 350
+          self.maxparticles = 400
           self.initialparticlecount = min(self.maxparticles, 15)
           self.particlesperstep = 3
           self.liveparticles = 0
