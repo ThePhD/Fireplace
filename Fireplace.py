@@ -18,18 +18,127 @@ class particle ():
           self.ysize = 0
           self.color = (0, 0, 0, 255)
 
+class rain_emitter ():
+     def __init__(self):
+          self.colors = [
+               (24, 0, 150, 255),
+               (51, 41, 157, 255),
+               (127, 127, 140, 255),
+               (105, 105, 255, 255),
+               (100, 100, 128, 255),
+          ]
+          self.x = 0
+          self.y = 0
+          self.backgroundcolor = sfml.graphics.Color( 25, 25, 25, 255 )
+          self.textcolor = sfml.graphics.Color( 255, 255, 255, 255 )
+          self.basesize = (-320, 640.0)
+          self.heightjitter = (0.0, 25.0)
+          self.particles = []
+          # can't seem to handle more than this without making optimizations
+          # of some sort...
+          self.maxparticles = 350
+          self.initialparticlecount = min(self.maxparticles, 3)
+          self.particlesperstep = 2
+          self.liveparticles = 0
+          self.angle = 75
+          self.yvelrange = (-800, -480)
+          xvelpart = int(self.yvelrange[0] / math.tan(math.radians(self.angle)))
+          self.xvelrange = (xvelpart - 5, xvelpart + 5)
+          self.xsizerange = (1, 2)
+          self.ysizerange = (10, 18)
+          self.persistence = 0.75
+          self.radius = 640
+
+          self.sprite = sfml.RectangleShape()
+          self.sprite.outline_thickness = 0
+          self.sprite.outline_color = sfml.graphics.Color.TRANSPARENT
+          # so, unlike any graphics or math program I've ever seen,
+          # sfml takes things in... angles.
+          # .... ANGLES. Not radians. Gud job, sfml
+          self.sprite.rotation = 90-self.angle
+          for i in range(self.maxparticles):
+               self.particles.append(self.gen_particle(i))
+          self.start()
+          
+     def gen_particle ( self, i ):
+          # Looked into it: this IS a pseudo random number generator
+          # and is not cryptographically secure (e.g., it's using a Mersenne Twister underneath)
+          # which is a pseudo RNG and very fast
+          xrand = random.randint(self.basesize[0], self.basesize[1])
+          yrand = random.randint(self.heightjitter[0], self.heightjitter[1])
+          xvel = random.randint(self.xvelrange[0], self.xvelrange[1])
+          yvel = random.randint(self.yvelrange[0], self.yvelrange[1])
+          xsize = random.randint(self.xsizerange[0], self.xsizerange[1])
+          ysize = random.randint(self.ysizerange[0], self.ysizerange[1])
+          p = particle()
+          p.x = xrand
+          p.y = yrand
+          p.xvelocity = xvel
+          p.yvelocity = yvel
+          p.xacceleration = 0
+          p.yacceleration = 0
+          p.xsize = xsize
+          p.ysize = ysize
+          p.life = 1
+          p.color = self.colors[random.randint(0, len(self.colors)-1)]
+          return p
+
+     def start( self ):
+          for i in range(len(self.particles)):
+               if i < self.initialparticlecount:
+                    self.particles[i].life = 1
+               else:
+                    self.particles[i].life = 0
+
+     def particle_step( self, p, dt ):
+          c2 = p.x * p.x + p.y * p.y
+          if ( c2 > self.radius * self.radius ):
+               p.life = 0
+
+     def step( self, dt ):
+          particlescreated = 0
+          for i, p in enumerate(self.particles):
+               if p.life > 0:
+                    continue
+               if particlescreated >= self.particlesperstep:
+                    break
+               self.particles[i] = self.gen_particle(i)
+               particlescreated += 1
+          
+          self.liveparticles = 0
+          for i, p in enumerate(self.particles):
+               if p.life < 1:
+                    continue
+               self.liveparticles += 1
+               p.xvelocity += p.xacceleration * dt
+               p.yvelocity += p.yacceleration * dt
+               p.x += p.xvelocity * dt
+               p.y += p.yvelocity * dt
+               self.particle_step( p, dt )       
+
+     def particle_render( self, screen, p ):
+          c2 = p.x * p.x + p.y * p.y
+          radiusratio = ( c2 / ( self.radius * self.radius ) )
+          alpharatio = 1 - radiusratio
+          x, y = to_screen( screen, p.x + self.x, p.y + self.y )
+          self.sprite.position = (x, y)
+          self.sprite.origin = (p.xsize / 2, p.ysize / 2)
+          self.sprite.size = (p.xsize, p.ysize)
+          self.sprite.fill_color = sfml.graphics.Color( p.color[0], p.color[1], p.color[2], p.color[3] * alpharatio)
+          screen.draw(self.sprite)
+          
+     def render( self, screen ):
+          for p in self.particles:
+               if p.life < 1:
+                    continue
+               self.particle_render( screen, p )
+
 class fire_emitter ():
      def __init__(self):
           self.colors = [
-               #(150, 150, 24, 255),
                (255, 255, 24, 255),
                (255, 125, 0, 255),
                (191, 87, 0, 255),
-               #(150, 0, 24, 255),
-               #(157, 41, 51, 255),
-               #(140, 127, 127, 255),
-               #(105, 105, 105, 255),
-               #(0, 0, 0, 255),
           ]
           self.x = 0
           self.y = 0
@@ -42,12 +151,12 @@ class fire_emitter ():
           # of some sort...
           self.maxparticles = 350
           self.initialparticlecount = min(self.maxparticles, 15)
+          self.particlesperstep = 3
           self.liveparticles = 0
           self.xvelrange = (-60, 60)
           self.yvelrange = (150, 350)
           self.xsizerange = (10, 18)
           self.ysizerange = (10, 18)
-          self.particlesperstep = 5
           self.persistence = 0.75
           self.radius = 350
           self.sprite = sfml.RectangleShape()
@@ -153,7 +262,7 @@ class main():
           self.updatetime = time.perf_counter()
           self.physicstime = time.perf_counter()
           self.rendertime = time.perf_counter()
-          self.debugdisplay = True
+          self.debugdisplay = False
           
           self.emitters = []
           self.emitterindex = 0
@@ -171,14 +280,16 @@ class main():
                     if type(event) is sfml.CloseEvent:
                          self.screen.close()
                     elif type(event) is sfml.KeyEvent:
-                         if event.key == sfml.Keyboard.TILDE:
+                         if not event.pressed:
+                              continue
+                         if event.code == sfml.Keyboard.TILDE:
                               self.debugdisplay = not self.debugdisplay
-                         if event.key == sfml.Keyboard.LEFT:
+                         if event.code == sfml.Keyboard.LEFT:
                               self.emitterindex = clamp( 
                                    ( len(self.emitters) - 1 ) if self.emitterindex == 0 
                                    else (self.emitterindex - 1) % len(self.emitters), 
                                    0, len(self.emitters) )
-                         if event.key == sfml.Keyboard.RIGHT:
+                         if event.code == sfml.Keyboard.RIGHT:
                               self.emitterindex = (self.emitterindex + 1) % len(self.emitters)
                
                # call step and render methods
@@ -209,6 +320,10 @@ class main():
           self.emitters.append(f)
 
           # a rain emitter; can configure in its constructor, or tweak things here
+          r = rain_emitter();
+          r.x = self.screen.width / 2.0
+          r.y = self.screen.height
+          self.emitters.append(r)
 
      def update(self):
           self.firstupdate = False
@@ -248,9 +363,16 @@ class main():
           
      def step(self, deltatime):
           # physics items go here
-          for e in self.emitters:
-               e.step(deltatime)
-         
+
+          # only update THE ONE
+          if not self.emitters or self.emitterindex >= len(self.emitters):
+               return
+          
+          # this also gives the cool impression that the other simulation is "frozen" when switched away from
+          # We know we have a good emitter, then
+          currentemitter = self.emitters[self.emitterindex]
+          currentemitter.step(deltatime)
+
      def render(self):
           self.firstrender = False
           begin = time.perf_counter()
@@ -272,20 +394,27 @@ class main():
           self.screen.clear(currentemitter.backgroundcolor)
           # Render whatever the emitter tells us to
           currentemitter.render( self.screen )
+          
+          self.controlstext = sfml.Text("Left and Right arrows to change emitter, ~ to show debug info...", self.font, self.fontsize)
+          self.controlstext.color = currentemitter.textcolor
+          self.controlstext.color.a = 128
+          self.controlstext.position = (0, self.lineheight * 0)
+          self.screen.draw(self.controlstext)
+               
           # Information text
           if self.debugdisplay:
                self.updatetext = sfml.Text("update timing: {:.2f} ms delta, {:.2f} ms lag, {:.2f} ms execution".format(self.updatedelta * 1000, self.updatelag * 1000, self.updateexecutiontime * 1000), self.font, self.fontsize)
                self.updatetext.color = currentemitter.textcolor
-               self.updatetext.position = (0, self.lineheight * 0)
+               self.updatetext.position = (0, self.lineheight * 1)
                self.physicstext = sfml.Text("physics timing: {} steps, {:.2f} ms delta, {:.2f} ms lag, {:.2f} ms execution".format(self.physicssteps, self.physicsdelta * 1000, self.physicslag * 1000, self.physicsexecutiontime * 1000), self.font, self.fontsize)
                self.physicstext.color = currentemitter.textcolor
-               self.physicstext.position = (0, self.lineheight * 1)
+               self.physicstext.position = (0, self.lineheight * 2)
                self.rendertext = sfml.Text("render timing: {:.2f} FPS, {:.2f} ms delta, {:.2f} ms lag, {:.2f} ms execution".format((0 if self.renderdelta == 0 else ( 1 / self.renderdelta ) ), self.renderdelta * 1000, self.renderlag * 1000, self.renderexecutiontime * 1000), self.font, self.fontsize)
                self.rendertext.color = currentemitter.textcolor
-               self.rendertext.position = (0, self.lineheight * 2)
+               self.rendertext.position = (0, self.lineheight * 3)
                self.particletext = sfml.Text("emitter {}'s particles: {}".format(self.emitterindex, currentemitter.liveparticles), self.font, self.fontsize)
                self.particletext.color = currentemitter.textcolor
-               self.particletext.position = (0, self.lineheight * 3)
+               self.particletext.position = (0, self.lineheight * 4)
                self.screen.draw(self.updatetext)
                self.screen.draw(self.physicstext)
                self.screen.draw(self.rendertext)
