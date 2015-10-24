@@ -40,7 +40,7 @@ class fire_emitter ():
           self.initialparticlecount = 25
           # can't seem to handle more than this without making optimizations
           # of some sort...
-          self.maxparticles = 450
+          self.maxparticles = 350
           self.liveparticles = 0
           self.xvelrange = (-60, 60)
           self.yvelrange = (150, 350)
@@ -282,7 +282,7 @@ class main():
           currentemitter = self.emitters[self.emitterindex]
 
           # Render whatever the emitter tells us to
-          #currentemitter.render( self.screenbuffer )
+          currentemitter.render( self.screenbuffer )
           
           # Information text
           if self.debugdisplay:
