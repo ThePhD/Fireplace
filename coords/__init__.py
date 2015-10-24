@@ -6,7 +6,7 @@
      return x
 
 def to_screen( screen, x, y ):
-     return x, -y + screen.get_height()
+     return x, -y + screen.height
 
 def center( x, y, width, height ):
      return adjust(x, y, width, height, 0.5, 0.5 )

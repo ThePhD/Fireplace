@@ -1,9 +1,8 @@
 ﻿import sys
-import pygame
+import sfml
 import time
 import random
 import math
-import numpy
 from coords import *
 
 class particle ():
@@ -34,13 +33,15 @@ class fire_emitter ():
           ]
           self.x = 0
           self.y = 0
+          self.backgroundcolor = sfml.graphics.Color( 25, 25, 25, 255 )
+          self.textcolor = sfml.graphics.Color( 255, 255, 255, 255 )
           self.basesize = (-30.0, 30.0)
           self.heightjitter = (-15.0, 15.0)
           self.particles = []
-          self.initialparticlecount = 25
           # can't seem to handle more than this without making optimizations
           # of some sort...
           self.maxparticles = 350
+          self.initialparticlecount = min(self.maxparticles, 15)
           self.liveparticles = 0
           self.xvelrange = (-60, 60)
           self.yvelrange = (150, 350)
@@ -49,8 +50,11 @@ class fire_emitter ():
           self.particlesperstep = 5
           self.persistence = 0.75
           self.radius = 350
+          self.sprite = sfml.RectangleShape()
+          self.sprite.outline_thickness = 0
+          self.sprite.outline_color = sfml.graphics.Color.TRANSPARENT
           for i in range(self.maxparticles):
-               self.particles.append(particle())
+               self.particles.append(self.gen_particle(i))
           self.start()
           
      def gen_particle ( self, i ):
@@ -77,8 +81,11 @@ class fire_emitter ():
           return p
 
      def start( self ):
-          for i in range(self.initialparticlecount):
-               self.particles[i].life = 1
+          for i in range(len(self.particles)):
+               if i < self.initialparticlecount:
+                    self.particles[i].life = 1
+               else:
+                    self.particles[i].life = 0
 
      def particle_step( self, p, dt ):
           c2 = p.x * p.x + p.y * p.y
@@ -107,26 +114,16 @@ class fire_emitter ():
                self.particle_step( p, dt )       
 
      def particle_render( self, screen, p ):
-          # TODO: offset calculations into a table 
-          # TODO: hash particle values and save color/alpha information
-          c2 = math.sqrt(p.x * p.x + p.y * p.y)
-          radiusratio = ( c2 / self.radius )
+          c2 = p.x * p.x + p.y * p.y
+          radiusratio = ( c2 / ( self.radius * self.radius ) )
           alpharatio = 1 - radiusratio
-          # color
-          color = ( p.color[0], p.color[1], p.color[2], p.color[3] * alpharatio )
-          ashcolor = (0, 0, 0, alpharatio)
-          # don't start coloring for ash until it gets to (+0.5) or farther in radius
-          ashbias = float(clamp(radiusratio, self.persistence, 1))
-          ashbias = (1 - ashbias) / (1 - self.persistence)
-          ashbias = tuple([ashbias]*4)
-          color = interpolate_inverse( color, ashcolor, ashbias)
           x, y = to_screen( screen, p.x + self.x, p.y + self.y )
-          x, y = center( x, y, 4, 4 )
-          # The rectangle looks better
-          # TODO: pre-bake into texture and reuse that
-          pygame.draw.rect( screen, color, ( x, y, p.xsize, p.ysize ) )
-          #pygame.draw.circle( screen, color, (int(x), int(y)), 10 )
-
+          self.sprite.position = (x, y)
+          self.sprite.origin = (p.xsize / 2, p.ysize / 2)
+          self.sprite.size = (p.xsize, p.ysize)
+          self.sprite.fill_color = sfml.graphics.Color( p.color[0], p.color[1], p.color[2], p.color[3] * alpharatio)
+          screen.draw(self.sprite)
+          
      def render( self, screen ):
           for p in self.particles:
                if p.life < 1:
@@ -135,7 +132,6 @@ class fire_emitter ():
 
 class main():
      def __init__(self):
-          pygame.init()
           self.size = self.width, self.height = 640, 480
           self.running = False
           self.firstupdate = True
@@ -149,6 +145,7 @@ class main():
           self.updatelag = 0
           self.physicslag = 0
           self.physicssteps = 0
+          self.rollingphysicsdelta = 0
           self.renderlag = 0
           self.updateexecutiontime = 0
           self.physicsexecutiontime = 0
@@ -161,75 +158,46 @@ class main():
           self.emitters = []
           self.emitterindex = 0
 
-          pygame.display.set_caption("Fireplace")
-          self.screen = pygame.display.set_mode(self.size, pygame.HWSURFACE | pygame.SRCALPHA | pygame.DOUBLEBUF, 24)
-          self.screenbuffer = pygame.Surface(self.size, pygame.SRCALPHA )
-          self.font = pygame.font.Font(None, 14)
+          self.screen = sfml.RenderWindow(sfml.VideoMode(self.width, self.height), "Fireplace")
+          self.font = sfml.Font.from_file("./OpenSans-Regular.ttf")
+          self.fontsize = 12
+          self.lineheight = self.font.get_line_spacing(self.fontsize)
           
      def inner_run(self):
           while self.running:
                # handle events
-               for event in pygame.event.get():
-                    if event.type == pygame.QUIT: 
-                         return
-                    elif event.type == pygame.KEYUP:
-                         if event.key == pygame.K_BACKQUOTE:
+               for event in self.screen.events:
+                    # close window: exit
+                    if type(event) is sfml.CloseEvent:
+                         self.screen.close()
+                    elif type(event) is sfml.KeyEvent:
+                         if event.key == sfml.Keyboard.TILDE:
                               self.debugdisplay = not self.debugdisplay
-                         if event.key == pygame.K_LEFT:
+                         if event.key == sfml.Keyboard.LEFT:
                               self.emitterindex = clamp( 
                                    ( len(self.emitters) - 1 ) if self.emitterindex == 0 
                                    else (self.emitterindex - 1) % len(self.emitters), 
                                    0, len(self.emitters) )
-                         if event.key == pygame.K_RIGHT:
+                         if event.key == sfml.Keyboard.RIGHT:
                               self.emitterindex = (self.emitterindex + 1) % len(self.emitters)
-               # call step and render methods
-              
-               # perform timing and first time checks
-               if self.firstupdate:
-                    self.firstupdate = False
-                    self.updatedelta = 0
-                    self.updatelag = 0
-                    self.updatetime = time.perf_counter()
-                    begin = time.perf_counter()
-                    self.update()
-                    self.updateexecutiontime = time.perf_counter() - begin
-               else:
-                    self.updatedelta = time.perf_counter() - self.updatetime
-                    if self.targetupdatetime <= self.updatedelta:
-                         begin = time.perf_counter()
-                         self.update()
-                         self.updateexecutiontime = time.perf_counter() - begin
-                         self.updatelag = self.targetupdatetime - self.updateexecutiontime
-                         # update related timing
-                         self.updatetime = time.perf_counter()
                
-               # perform timing and first time checks
-               if self.firstrender:
-                    self.firstrender = False
-                    self.renderdelta = 0
-                    self.renderlag = 0
-                    self.rendertime = time.perf_counter()
-                    begin = time.perf_counter()
+               # call step and render methods
+               self.updatedelta = time.perf_counter() - self.updatetime
+               if self.targetupdatetime <= self.updatedelta or self.firstupdate:
+                    self.update()
+               
+               self.renderdelta = time.perf_counter() - self.rendertime
+               if self.targetrendertime <= self.renderdelta or self.firstrender:
                     self.render()
-                    self.renderexecutiontime = time.perf_counter() - begin
-               else:
-                    self.renderdelta = time.perf_counter() - self.rendertime
-                    if self.targetrendertime <= self.renderdelta:
-                         begin = time.perf_counter()
-                         self.render()
-                         self.renderexecutiontime = time.perf_counter() - begin
-                         self.renderlag = self.targetrendertime - self.renderexecutiontime
-                         # update related timing
-                         self.rendertime = time.perf_counter()
 
      def run(self):
           self.running = True
           self.firstupdate = True
           self.firstrender = True
           self.initialize()
+          self.screen.show()
           self.inner_run()
           self.running = False
-          pygame.quit()
 
      def initialize(self):
           self.clearcolor = (255, 255, 255, 255)
@@ -237,12 +205,21 @@ class main():
           # a fire emitter; can configure in its constructor,
           # or tweak things here
           f = fire_emitter();
-          f.x = self.screen.get_width() / 2.0
+          f.x = self.screen.width / 2.0
           self.emitters.append(f)
 
           # a rain emitter; can configure in its constructor, or tweak things here
 
      def update(self):
+          self.firstupdate = False
+          begin = time.perf_counter()
+          self.update_delta(self.updatedelta)
+          self.updateexecutiontime = time.perf_counter() - begin
+          self.updatelag = self.targetupdatetime - self.updateexecutiontime
+          # update related timing
+          self.updatetime = time.perf_counter()
+
+     def update_delta(self, dt):
           # update hardcore logic here
           
           # variable framerate is actually a terrible idea for simulations
@@ -251,12 +228,13 @@ class main():
           
           # update the simulation with a fixed timesteps
           # as many times as it needed since the last time we came here
-          rollingphysicsdelta = self.physicsdelta = time.perf_counter() - self.physicstime
+          self.physicsdelta = time.perf_counter() - self.physicstime
+          self.rollingphysicsdelta += self.physicsdelta
           self.physicssteps = 0
           begin = time.perf_counter()
-          while self.targetphysicstime <= rollingphysicsdelta:
+          while self.targetphysicstime <= self.rollingphysicsdelta:
                self.step(self.targetphysicstime)
-               rollingphysicsdelta -= self.targetphysicstime
+               self.rollingphysicsdelta -= self.targetphysicstime
                self.physicssteps += 1
                self.physicstime = time.perf_counter()
           self.physicsexecutiontime = time.perf_counter() - begin
@@ -272,33 +250,47 @@ class main():
           # physics items go here
           for e in self.emitters:
                e.step(deltatime)
-          
+         
      def render(self):
-          self.screen.fill(self.clearcolor)
-          self.screenbuffer.fill((0, 0, 0, 0))
+          self.firstrender = False
+          begin = time.perf_counter()
+          self.render_delta(self.renderdelta)
+          # put the buffer swap here, since it should be part of timing
+          self.screen.display( )
+          self.renderexecutiontime = time.perf_counter() - begin
+          self.renderlag = self.targetrendertime - self.renderexecutiontime
+          self.rendertime = time.perf_counter()
+          
+     def render_delta(self, dt):
           if not self.emitters or self.emitterindex >= len(self.emitters):
+               self.screen.clear(sfml.graphics.Color.WHITE)
                return
           # We know we have a good emitter, then
           currentemitter = self.emitters[self.emitterindex]
 
+          # clear to the emitter's desired color
+          self.screen.clear(currentemitter.backgroundcolor)
           # Render whatever the emitter tells us to
-          currentemitter.render( self.screenbuffer )
-          
+          currentemitter.render( self.screen )
           # Information text
           if self.debugdisplay:
-               self.updatetext = self.font.render("update timing: {:.2f} ms delta, {:.2f} ms lag, {:.2f} ms execution".format(self.updatedelta * 1000, self.updatelag * 1000, self.updateexecutiontime * 1000), True, (0,0,0,255), None)
-               self.physicstext = self.font.render("physics timing: {} steps, {:.2f} ms delta, {:.2f} ms lag, {:.2f} ms execution".format(self.physicssteps, self.physicsdelta * 1000, self.physicslag * 1000, self.physicsexecutiontime * 1000), True, (0,0,0,255), None)
-               self.rendertext = self.font.render("render timing: {:.2f} FPS, {:.2f} ms delta, {:.2f} ms lag, {:.2f} ms execution".format((0 if self.renderdelta == 0 else ( 1 / self.renderdelta ) ), self.renderdelta * 1000, self.renderlag * 1000, self.renderexecutiontime * 1000), True, (0,0,0,255), None)
-               self.particletext = self.font.render("emitter {}'s particles: {}".format(self.emitterindex, currentemitter.liveparticles), True, (0,0,0,255), None)
-               lineheight = self.font.get_linesize()
-               self.screenbuffer.blit(self.updatetext, (0, lineheight * 0))
-               self.screenbuffer.blit(self.physicstext, (0, lineheight * 1))
-               self.screenbuffer.blit(self.rendertext, (0, lineheight * 2))
-               self.screenbuffer.blit(self.particletext, (0, lineheight * 3))
+               self.updatetext = sfml.Text("update timing: {:.2f} ms delta, {:.2f} ms lag, {:.2f} ms execution".format(self.updatedelta * 1000, self.updatelag * 1000, self.updateexecutiontime * 1000), self.font, self.fontsize)
+               self.updatetext.color = currentemitter.textcolor
+               self.updatetext.position = (0, self.lineheight * 0)
+               self.physicstext = sfml.Text("physics timing: {} steps, {:.2f} ms delta, {:.2f} ms lag, {:.2f} ms execution".format(self.physicssteps, self.physicsdelta * 1000, self.physicslag * 1000, self.physicsexecutiontime * 1000), self.font, self.fontsize)
+               self.physicstext.color = currentemitter.textcolor
+               self.physicstext.position = (0, self.lineheight * 1)
+               self.rendertext = sfml.Text("render timing: {:.2f} FPS, {:.2f} ms delta, {:.2f} ms lag, {:.2f} ms execution".format((0 if self.renderdelta == 0 else ( 1 / self.renderdelta ) ), self.renderdelta * 1000, self.renderlag * 1000, self.renderexecutiontime * 1000), self.font, self.fontsize)
+               self.rendertext.color = currentemitter.textcolor
+               self.rendertext.position = (0, self.lineheight * 2)
+               self.particletext = sfml.Text("emitter {}'s particles: {}".format(self.emitterindex, currentemitter.liveparticles), self.font, self.fontsize)
+               self.particletext.color = currentemitter.textcolor
+               self.particletext.position = (0, self.lineheight * 3)
+               self.screen.draw(self.updatetext)
+               self.screen.draw(self.physicstext)
+               self.screen.draw(self.rendertext)
+               self.screen.draw(self.particletext)
           
-          self.screen.blit( self.screenbuffer, (0,0), None )
-          pygame.display.flip()
-
 
 m = main()
 m.run()
